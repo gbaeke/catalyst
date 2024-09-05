@@ -4,3 +4,5 @@ dev-idpdemo.yaml
 *.json
 .venv
 __pycache__
+.dapr/
+dapr.yaml

@@ -16,7 +16,8 @@ from output_handlers.json_handler import JSONOutputHandler
 from extractors.groq_extractor import GroqInvoiceExtractor
 
 # Set up required inputs for http client to perform service invocation
-base_url = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
+dapr_http_port = os.getenv('DAPR_HTTP_PORT', '3500')
+dapr_http_endpoint = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
 dapr_api_token = os.getenv('DAPR_API_TOKEN', '')
 pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub')
 storage_account_name = os.getenv('STORAGE_ACCOUNT_NAME', '')
@@ -27,7 +28,6 @@ docint_url = os.getenv('DOCINT_URL', '')
 openai_key = os.getenv('OPENAI_KEY', '')
 kvstore_name = os.getenv('KVSTORE_NAME', 'kvstore')
 invoke_target_appid = os.getenv('INVOKE_APPID', 'upload')
-base_url = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
 azure_openai_key = os.getenv('AZURE_OPENAI_KEY', '')
 azure_openai_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT', '')
 azure_openai_model = os.getenv('AZURE_OPENAI_MODEL', '')
@@ -82,13 +82,19 @@ def retrieve_file_from_azure(storage_account_name: str, container_name: str, sto
 def retrieve_template_from_kvstore(template_name: str):
 
     # use dapr invoke but use generic http client with required dapr headers
-    headers = {'dapr-app-id': invoke_target_appid, 'dapr-api-token': dapr_api_token,
-               'content-type': 'application/json'}
+    headers = {'dapr-app-id': invoke_target_appid, 'content-type': 'application/json'}
+    if dapr_api_token:
+        headers['dapr-api-token'] = dapr_api_token
 
     
     try:
+        
+        # this is somewhat convoluted to hzve a different url depending on dapr or catalyst
+        #   Dapr: connect to the dapr sidecar which is http://localhost:PORT and set the port only if not catalyst
+        #         if dapr_api_token is not set then we suppose dapr is used
+        #   Catalyst: connect with catalust in which case the endpoint is the http://localhost and default port
         result = requests.get(
-            url='%s/template/%s' % (base_url, template_name),
+            url=f'{dapr_http_endpoint}{":" + dapr_http_port if not dapr_api_token else ""}/template/{template_name}',
             headers=headers
         )
 
@@ -106,6 +112,8 @@ def retrieve_template_from_kvstore(template_name: str):
 @app.get("/")
 async def root_status():
     return JSONResponse(content={"status": "ok"}, status_code=200)
+
+
 
 @app.post('/process')  # called by pub/sub when a new invoice is uploaded
 async def consume_orders(event: CloudEvent):
@@ -138,6 +146,8 @@ async def consume_orders(event: CloudEvent):
         lines = [line.content for page in result.pages for line in page.lines]
         lines_str = "\n".join(lines)
 
+        logging.info("Document Intelligence processing completed successfully.")
+
         # retrieve the template from the kvstore
         template_content = retrieve_template_from_kvstore(template_name)
 
@@ -162,6 +172,18 @@ async def consume_orders(event: CloudEvent):
 
     # return 200 ok to indicate successful processing of message
     return {'success': True}
+
+# this is used when you use Dapr directly instead of catalyst
+@app.get("/dapr/subscribe")
+async def subscribe():
+    subscriptions = [
+        {
+            'pubsubname': pubsub_name,
+            'topic': 'invoices',
+            'route': '/process'
+        }
+    ]
+    return JSONResponse(content=subscriptions)
 
 if __name__ == "__main__":
     import uvicorn
