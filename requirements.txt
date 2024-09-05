@@ -6,3 +6,7 @@ pydantic==2.4.2
 requests==2.32.0
 uvicorn==0.23.2
 aiohttp==3.10.2
+azure-ai-documentintelligence==1.0.0b3
+azure-core==1.30.2
+azure-storage-blob==12.22.0
+groq==0.11.0
