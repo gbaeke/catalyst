@@ -4,7 +4,7 @@ This is a demo of a document processing pipeline that uses Dapr to orchestrate a
 
 To run the demo, you need to install the diagrid CLI, authenticate and ensure the correct project is selected. Please see the following blog post for details: TO INSERT BLOG POST URL
 
-Next, run diagrid dev scaffold. That creates a dev-idpdemo.yaml file in the current directory. It looks like this:
+Next, run diagrid dev scaffold. That creates a dev-idpdemo.yaml file in the current directory. You need to edit the file to set the correct values for the environment variables:
 
 ```yaml
 project: idpdemo
