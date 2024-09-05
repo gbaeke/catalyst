@@ -69,3 +69,44 @@ You can install the packages with the following command:
 ```bash
 pip install -r requirements.txt
 ```
+
+## Run with Dapr
+
+To run with Dapr, add a dapr.yaml file to the root of the project with the following content:
+
+```yaml
+version: 1
+apps:
+  - appID: process
+    appDirPath: ./process
+    appPort: 8001
+    command: ["python", "app.py"]
+    env:
+      STORAGE_ACCOUNT_NAME: [Name of the Azure storage account]
+      STORAGE_ACCOUNT_KEY: [Access key for the Azure storage account]
+      CONTAINER_NAME: [Name of the container in Azure storage]
+      DOCINT_KEY: [API key for Azure Document Intelligence service]
+      DOCINT_URL: [Endpoint URL for Azure Document Intelligence service]
+      OPENAI_KEY: [API key for OpenAI service]
+      AZURE_OPENAI_KEY: [API key for Azure OpenAI service]
+      AZURE_OPENAI_ENDPOINT: [Endpoint URL for Azure OpenAI service]
+      AZURE_OPENAI_MODEL: [Name of the Azure OpenAI model to use]
+      AZURE_OPENAI_API_VERSION: [API version for Azure OpenAI service]
+      INVOICE_EXTRACTOR_TYPE: [Type of invoice extractor to use (e.g., 'openai')]
+      INVOICE_OUTPUT_HANDLER: [Type of output handler for invoice data (e.g., 'json')]
+      GROQ_API_KEY: [API key for Groq service]
+      KVSTORE_NAME: statestore
+      PUBSUB_NAME: pubsub
+  - appID: upload
+    appDirPath: ./upload
+    appPort: 8000
+    command: ["python", "app.py"]
+    env:
+      STORAGE_ACCOUNT_NAME: [Name of the Azure storage account]
+      STORAGE_ACCOUNT_KEY: [Access key for the Azure storage account]
+      CONTAINER_NAME: [Name of the container in Azure storage]
+      PUBSUB_NAME: pubsub
+      KVSTORE_NAME: statestore
+```
+
+To run the app with Dapr, make sure Dapr is installed and Docker is running with Redis. The default statestore and pubsub names use Redis. Run the app with `dapr run -f .`
