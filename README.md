@@ -31,6 +31,9 @@ apps:
     INVOICE_EXTRACTOR_TYPE: [Type of invoice extractor to use; openai or groq]
     INVOICE_OUTPUT_HANDLER: [Type of output handler for invoice processing; json or csv]
     GROQ_API_KEY: [API key for Groq service]
+    EVENT_GRID_TOPIC_ENDPOINT: [Endpoint URL for Azure Event Grid topic]
+    EVENT_GRID_TOPIC_KEY: [Access key for Azure Event Grid topic]
+    EVENT_GRID_TOPIC_NAME: invoices
   workDir: process
   command: ["python", "app.py"]
 - appId: upload
@@ -99,6 +102,9 @@ apps:
       GROQ_API_KEY: [API key for Groq service]
       KVSTORE_NAME: statestore
       PUBSUB_NAME: pubsub
+      EVENT_GRID_TOPIC_ENDPOINT: [Endpoint URL for Azure Event Grid topic]
+      EVENT_GRID_TOPIC_KEY: [Access key for Azure Event Grid topic]
+      EVENT_GRID_TOPIC_NAME: invoices
   - appID: upload
     appDirPath: ./upload
     appPort: 8000
