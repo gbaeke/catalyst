@@ -14,6 +14,7 @@ from extractors.extractor_factory import InvoiceExtractorFactory
 from output_handlers.handler_factory import OutputHandlerFactory
 from output_handlers.json_handler import JSONOutputHandler
 from extractors.groq_extractor import GroqInvoiceExtractor
+from output_handlers.event_grid_handler import EventGridOutputHandler
 
 # Set up required inputs for http client to perform service invocation
 dapr_http_port = os.getenv('DAPR_HTTP_PORT', '3500')
@@ -35,7 +36,11 @@ azure_openai_api_version = os.getenv('AZURE_OPENAI_API_VERSION', '')
 
 # Add this new environment variable
 extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'groq')
-output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'csv')
+output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'event_grid')
+
+# Add these environment variables
+event_grid_topic_endpoint = os.getenv('EVENT_GRID_TOPIC_ENDPOINT', '')
+event_grid_topic_key = os.getenv('EVENT_GRID_TOPIC_KEY', '')
 
 app = FastAPI()
 
@@ -162,7 +167,7 @@ async def consume_orders(event: CloudEvent):
         else:
             logging.info(f"Extracted invoice details: {invoice_details}")
 
-            # Use the JSON output handler
+            # Use the appropriate output handler
             output_handler = OutputHandlerFactory.get_handler(output_handler_type)
             output_handler.handle_output(blob_name, invoice_details)
 
