@@ -28,8 +28,8 @@ apps:
     AZURE_OPENAI_ENDPOINT: [Endpoint URL for Azure OpenAI service]
     AZURE_OPENAI_MODEL: [Specific model to use with Azure OpenAI]
     AZURE_OPENAI_API_VERSION: [API version for Azure OpenAI service]
-    INVOICE_EXTRACTOR_TYPE: [Type of invoice extractor to use]
-    INVOICE_OUTPUT_HANDLER: [Type of output handler for invoice processing]
+    INVOICE_EXTRACTOR_TYPE: [Type of invoice extractor to use; openai or groq]
+    INVOICE_OUTPUT_HANDLER: [Type of output handler for invoice processing; json or csv]
     GROQ_API_KEY: [API key for Groq service]
   workDir: process
   command: ["python", "app.py"]
