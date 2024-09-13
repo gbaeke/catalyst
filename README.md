@@ -2,7 +2,7 @@
 
 This is a demo of a document processing pipeline that uses Dapr to orchestrate an asynchronous pipeline of document processing tasks. Instead of installing Dapr on the local machine or Kubernetes, this demo uses Catalyst. Catalyst is a Dapr-compatible  cloud-based runtime. Here we use it to build and run the app locally but you can also deploy these services to the cloud.
 
-To run the demo, you need to install the diagrid CLI, authenticate and ensure the correct project is selected. Please see the following blog post for details: TO INSERT BLOG POST URL
+To run the demo, you need to install the diagrid CLI, authenticate and ensure the correct project is selected. Please see the following blog post for details: https://blog.baeke.info/2024/09/13/writing-an-multi-service-document-extractor-with-the-help-of-diagrids-catalyst/
 
 Next, run diagrid dev scaffold. That creates a dev-idpdemo.yaml file in the current directory. You need to edit the file to set the correct values for the environment variables:
 
