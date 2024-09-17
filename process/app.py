@@ -20,7 +20,7 @@ from output_handlers.event_grid_handler import EventGridOutputHandler
 dapr_http_port = os.getenv('DAPR_HTTP_PORT', '3500')
 dapr_http_endpoint = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
 dapr_api_token = os.getenv('DAPR_API_TOKEN', '')
-pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub')
+pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub-azure')
 storage_account_name = os.getenv('STORAGE_ACCOUNT_NAME', '')
 storage_account_key = os.getenv('STORAGE_ACCOUNT_KEY', '')
 container_name = os.getenv('CONTAINER_NAME', '')
@@ -35,8 +35,8 @@ azure_openai_model = os.getenv('AZURE_OPENAI_MODEL', '')
 azure_openai_api_version = os.getenv('AZURE_OPENAI_API_VERSION', '')
 
 # Add this new environment variable
-extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'groq')
-output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'event_grid')
+extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'openai')
+output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'json')
 
 # Add these environment variables
 event_grid_topic_endpoint = os.getenv('EVENT_GRID_TOPIC_ENDPOINT', '')
@@ -145,11 +145,18 @@ async def consume_orders(event: CloudEvent):
             "prebuilt-layout", doc_request
         )
 
-        result: AnalyzeResult = poller.result(timeout=30)
+        logging.info("Document Intelligence processing started.")
+        result: AnalyzeResult = poller.result(timeout=10)
+        logging.info("Document Intelligence processing completed successfully.")
+
 
         # extract all lines and add them to one string
-        lines = [line.content for page in result.pages for line in page.lines]
-        lines_str = "\n".join(lines)
+        try:
+            lines = [line.content for page in result.pages for line in page.lines]
+            lines_str = "\n".join(lines)
+        except Exception as e:
+            logging.error(f"Could not extract text from document: {str(e)}")
+            raise
 
         logging.info("Document Intelligence processing completed successfully.")
 
@@ -173,7 +180,11 @@ async def consume_orders(event: CloudEvent):
 
     except Exception as e:
         logging.error(f"An error occurred during document processing: {str(e)}")
-        raise
+        # Return a 500 Internal Server Error response
+        return JSONResponse(
+            status_code=500,
+            content={"error": "An internal server error occurred during document processing."}
+        )
 
     # return 200 ok to indicate successful processing of message
     return {'success': True}
@@ -187,6 +198,7 @@ async def subscribe():
             'topic': 'invoices',
             'route': '/process'
         }
+
     ]
     return JSONResponse(content=subscriptions)
 

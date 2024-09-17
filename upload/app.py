@@ -11,7 +11,7 @@ import json
 from typing import Dict, Any, Tuple, Optional
 
 # Set up required inputs for http client to perform service invocation
-pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub')
+pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub-azure')
 topic_name = os.getenv('TOPIC_NAME', 'invoices')
 storage_account_name = os.getenv('STORAGE_ACCOUNT_NAME', 'diagrid')
 storage_account_key = os.getenv('STORAGE_ACCOUNT_KEY', '')
@@ -95,6 +95,7 @@ def publish_invoice(invoice: Invoice):
             )
             logging.info('Publish Successful. Invoice published: %s' %
                             invoice.path)
+            logging.info(f"Invoice model: {invoice.model_dump()}")
             return True
         except grpc.RpcError as err:
             logging.error(f"Failed to publish invoice: {err}")
