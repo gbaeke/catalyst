@@ -1,7 +1,8 @@
 import os
 import logging
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, create_model
 from typing import Any, Dict, Type
 from azure.storage.blob import BlobServiceClient
@@ -33,10 +34,19 @@ azure_openai_key = os.getenv('AZURE_OPENAI_KEY', '')
 azure_openai_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT', '')
 azure_openai_model = os.getenv('AZURE_OPENAI_MODEL', '')
 azure_openai_api_version = os.getenv('AZURE_OPENAI_API_VERSION', '')
+# Add Pusher environment variables
+pusher_app_id = os.getenv('PUSHER_APP_ID', '')
+pusher_key = os.getenv('PUSHER_KEY', '')
+pusher_secret = os.getenv('PUSHER_SECRET', '')
+pusher_cluster = os.getenv('PUSHER_CLUSTER', 'eu')
+pusher_channel = os.getenv('PUSHER_CHANNEL', 'docproc')
+
+
+
 
 # Add this new environment variable
 extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'openai')
-output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'json')
+output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher')
 
 # Add these environment variables
 event_grid_topic_endpoint = os.getenv('EVENT_GRID_TOPIC_ENDPOINT', '')
@@ -45,6 +55,14 @@ event_grid_topic_key = os.getenv('EVENT_GRID_TOPIC_KEY', '')
 app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
+
+
+# Mount the static directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/ui")
+async def read_index():
+    return FileResponse("static/index.html")
 
 # model for pub/sub data field
 #  path: the path to the file in the blob storage (file will be downloaded from blob storage)
@@ -201,6 +219,10 @@ async def subscribe():
 
     ]
     return JSONResponse(content=subscriptions)
+
+@app.get("/static/index.html")
+async def read_index():
+    return FileResponse("static/index.html")
 
 if __name__ == "__main__":
     import uvicorn

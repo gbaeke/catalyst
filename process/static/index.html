@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Processor Dashboard</title>
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f0f8ff; 
+            color: #333;
+        }
+        h1 { 
+            color: #4a4a4a; 
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #events { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin-top: 20px; 
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .event-item {
+            background-color: #e6f7ff;
+            border-left: 5px solid #1890ff;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+        }
+        #clearButton {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #ff4d4f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        #clearButton:hover {
+            background-color: #ff7875;
+        }
+    </style>
+</head>
+<body>
+    <h1>Invoice Processor Dashboard</h1>
+    <button id="clearButton">Clear All Events</button>
+    <div id="events"></div>
+
+    <script>
+        // Enable pusher logging - don't include this in production
+        Pusher.logToConsole = true;
+
+        var pusher = new Pusher('37b680b88a0482774af5', {
+            cluster: 'eu'
+        });
+
+        var channel = pusher.subscribe('docproc');
+        channel.bind('invoice-processed', function(data) {
+            var eventsDiv = document.getElementById('events');
+            var eventElement = document.createElement('div');
+            eventElement.className = 'event-item';
+            eventElement.innerHTML = '<strong>New Invoice Processed:</strong> ' + 
+                                     JSON.stringify(data, null, 2);
+            eventsDiv.prepend(eventElement);
+        });
+
+        document.getElementById('clearButton').addEventListener('click', function() {
+            document.getElementById('events').innerHTML = '';
+        });
+    </script>
+</body>
+</html>
