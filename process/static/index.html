@@ -59,7 +59,8 @@
         // Enable pusher logging - don't include this in production
         Pusher.logToConsole = true;
 
-        var pusher = new Pusher('37b680b88a0482774af5', {
+        var pusherKey = prompt("Please enter your Pusher key:");
+        var pusher = new Pusher(pusherKey, {
             cluster: 'eu'
         });
 
