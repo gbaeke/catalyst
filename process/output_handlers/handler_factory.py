@@ -5,14 +5,17 @@ from .pusher_handler import PusherOutputHandler
 
 class OutputHandlerFactory:
     @staticmethod
-    def get_handler(handler_type):
-        if handler_type == 'csv':
-            return CSVOutputHandler()
-        elif handler_type == 'json':
-            return JSONOutputHandler()
-        elif handler_type == 'event_grid':
-            return EventGridOutputHandler()
-        elif handler_type == 'pusher':
-            return PusherOutputHandler()
-        else:
-            raise ValueError(f"Unsupported output handler type: {handler_type}")
+    def get_handlers(handler_types):
+        handlers = []
+        for handler_type in handler_types:
+            if handler_type == 'csv':
+                handlers.append(CSVOutputHandler())
+            elif handler_type == 'json':
+                handlers.append(JSONOutputHandler())
+            elif handler_type == 'event_grid':
+                handlers.append(EventGridOutputHandler())
+            elif handler_type == 'pusher':
+                handlers.append(PusherOutputHandler())
+            else:
+                raise ValueError(f"Unsupported output handler type: {handler_type}")
+        return handlers

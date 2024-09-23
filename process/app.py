@@ -3,19 +3,16 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, create_model
-from typing import Any, Dict, Type
+from pydantic import BaseModel
+from typing import Any, Dict
 from azure.storage.blob import BlobServiceClient
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeResult, AnalyzeDocumentRequest
 from azure.core.credentials import AzureKeyCredential
-from openai import AzureOpenAI
 import requests
-from extractors.extractor_factory import InvoiceExtractorFactory
 from output_handlers.handler_factory import OutputHandlerFactory
-from output_handlers.json_handler import JSONOutputHandler
-from extractors.groq_extractor import GroqInvoiceExtractor
-from output_handlers.event_grid_handler import EventGridOutputHandler
+from extractors.extractor_factory import InvoiceExtractorFactory
+from extractors.openai_extractor import OpenAIInvoiceExtractor
 
 # Set up required inputs for http client to perform service invocation
 dapr_http_port = os.getenv('DAPR_HTTP_PORT', '3500')
@@ -41,12 +38,9 @@ pusher_secret = os.getenv('PUSHER_SECRET', '')
 pusher_cluster = os.getenv('PUSHER_CLUSTER', 'eu')
 pusher_channel = os.getenv('PUSHER_CHANNEL', 'docproc')
 
-
-
-
 # Add this new environment variable
 extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'openai')
-output_handler_type = os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher')
+output_handler_types = os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher').split(',')
 
 # Add these environment variables
 event_grid_topic_endpoint = os.getenv('EVENT_GRID_TOPIC_ENDPOINT', '')
@@ -55,7 +49,6 @@ event_grid_topic_key = os.getenv('EVENT_GRID_TOPIC_KEY', '')
 app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
-
 
 # Mount the static directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -84,9 +77,9 @@ class CloudEvent(BaseModel):
     type: str
     traceid: str
 
-def extract_invoice_details(template_content: Dict[str, str], input_string: str):
+def extract_invoice_details(template_content: Dict[str, str], input_string: str, template_name: str):
     extractor = InvoiceExtractorFactory.get_extractor(extractor_type)
-    return extractor.extract(template_content, input_string)
+    return extractor.extract(template_content, input_string, template_name)
 
 def retrieve_file_from_azure(storage_account_name: str, container_name: str, storage_account_key: str, blob_name: str) -> bytes:
     try:
@@ -103,27 +96,19 @@ def retrieve_file_from_azure(storage_account_name: str, container_name: str, sto
         return None
     
 def retrieve_template_from_kvstore(template_name: str):
-
-    # use dapr invoke but use generic http client with required dapr headers
     headers = {'dapr-app-id': invoke_target_appid, 'content-type': 'application/json'}
     if dapr_api_token:
         headers['dapr-api-token'] = dapr_api_token
 
-    
     try:
-        
-        # this is somewhat convoluted to hzve a different url depending on dapr or catalyst
-        #   Dapr: connect to the dapr sidecar which is http://localhost:PORT and set the port only if not catalyst
-        #         if dapr_api_token is not set then we suppose dapr is used
-        #   Catalyst: connect with catalust in which case the endpoint is the http://localhost and default port
         result = requests.get(
             url=f'{dapr_http_endpoint}{":" + dapr_http_port if not dapr_api_token else ""}/template/{template_name}',
-            headers=headers
+            headers=headers,
+            timeout=60
         )
 
         if result.ok:
-            logging.info('Invocation successful with status code: %s' %
-                         result.status_code)
+            logging.info('Invocation successful with status code: %s' % result.status_code)
             logging.info(f"Template retrieved: {result.json()}")
             return result.json()
 
@@ -131,12 +116,9 @@ def retrieve_template_from_kvstore(template_name: str):
         logging.error(f"An error occurred while retrieving template from Dapr KV store: {str(e)}")
         return None
 
-
 @app.get("/")
 async def root_status():
     return JSONResponse(content={"status": "ok"}, status_code=200)
-
-
 
 @app.post('/process')  # called by pub/sub when a new invoice is uploaded
 async def consume_orders(event: CloudEvent):
@@ -166,8 +148,7 @@ async def consume_orders(event: CloudEvent):
         logging.info("Document Intelligence processing started.")
         result: AnalyzeResult = poller.result(timeout=10)
         logging.info("Document Intelligence processing completed successfully.")
-
-
+        
         # extract all lines and add them to one string
         try:
             lines = [line.content for page in result.pages for line in page.lines]
@@ -179,23 +160,28 @@ async def consume_orders(event: CloudEvent):
         logging.info("Document Intelligence processing completed successfully.")
 
         # retrieve the template from the kvstore
-        template_content = retrieve_template_from_kvstore(template_name)
-
-        if template_content is None:
-            raise IOError(f"Failed to retrieve template from Dapr KV store: {template_name}")
-
-        # extract invoice details using OpenAI and new gpt-4o model with structured response
-        invoice_details = extract_invoice_details(template_content, lines_str)
+        template_content = None
+        if template_name not in OpenAIInvoiceExtractor.MODEL_REGISTRY:
+            logging.info(f"Using model from KV store: {template_name}")
+            template_content = retrieve_template_from_kvstore(template_name)
+            logging.info(f"Template retrieved from KV store: {template_content}")
+            if template_content is None:
+                raise IOError(f"Failed to retrieve template from Dapr KV store: {template_name}")
+        else:
+            logging.info(f"Using static model: {template_name}")
+            
+        # extract invoice details with specified extractor
+        invoice_details = extract_invoice_details(template_content, lines_str, template_name)
 
         if not invoice_details:
             raise ValueError("No invoice details extracted from the document.")
         else:
             logging.info(f"Extracted invoice details: {invoice_details}")
 
-            # Use the appropriate output handler
-            output_handler = OutputHandlerFactory.get_handler(output_handler_type)
-            output_handler.handle_output(blob_name, invoice_details)
-
+            # Use the appropriate output handlers
+            output_handlers = OutputHandlerFactory.get_handlers(output_handler_types)
+            for handler in output_handlers:
+                handler.handle_output(blob_name, invoice_details)
     except Exception as e:
         logging.error(f"An error occurred during document processing: {str(e)}")
         # Return a 500 Internal Server Error response
@@ -216,13 +202,17 @@ async def subscribe():
             'topic': 'invoices',
             'route': '/process'
         }
-
     ]
     return JSONResponse(content=subscriptions)
 
 @app.get("/static/index.html")
 async def read_index():
     return FileResponse("static/index.html")
+
+@app.post("/extract")
+async def extract_invoice(template_content: Dict[str, str], input_string: str, model_name: str = None):
+    result = extract_invoice_details(template_content, input_string)
+    return result
 
 if __name__ == "__main__":
     import uvicorn

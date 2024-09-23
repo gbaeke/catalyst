@@ -3,5 +3,5 @@ from typing import Dict, Any
 
 class BaseInvoiceExtractor(ABC):
     @abstractmethod
-    def extract(self, template_content: Dict[str, str], input_string: str) -> Dict[str, Any]:
+    def extract(self, template_content: Dict[str, str], input_string: str, template_name: str = None) -> Dict[str, Any]:
         pass

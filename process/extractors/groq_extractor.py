@@ -10,7 +10,10 @@ class GroqInvoiceExtractor(BaseInvoiceExtractor):
         self.client = Groq(api_key=os.getenv('GROQ_API_KEY'))
         pass
 
-    def extract(self, template_content: Dict[str, str], input_string: str) -> Dict[str, Any]:
+    def extract(self, template_content: Dict[str, str], input_string: str, template_name: str = None) -> Dict[str, Any]:
+        # template_content could be none if we are using a static model
+        if template_content is None:
+            raise ValueError("Template content is required for GROQ extraction.")
         
         # generate the prompt that includes the fields to extract
         prompt = "Extract the following fields from a given invoice. Return the fields in JSON format:\n"

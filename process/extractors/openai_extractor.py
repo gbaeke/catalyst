@@ -1,11 +1,18 @@
 from .base_extractor import BaseInvoiceExtractor
-from typing import Dict, Any
+from typing import Dict, Any, Type
 from openai import AzureOpenAI
-from pydantic import create_model
+from pydantic import create_model, BaseModel
 import logging
 import os
+from .models.static_invoice import Model  # Updated import path
 
 class OpenAIInvoiceExtractor(BaseInvoiceExtractor):
+    # Define MODEL_REGISTRY within the class
+    MODEL_REGISTRY = {
+        'static_invoice': Model,
+        # Add other models here as needed
+    }
+
     def __init__(self):
         self.client = AzureOpenAI(
             azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT', ''),
@@ -14,18 +21,21 @@ class OpenAIInvoiceExtractor(BaseInvoiceExtractor):
             api_key=os.getenv('AZURE_OPENAI_KEY', '')
         )
 
-    def extract(self, template_content: Dict[str, str], input_string: str) -> Dict[str, Any]:
-        type_mapping = {
-            'str': str,
-            'float': float,
-            'bool': bool
-        }
+    def extract(self, template_content: Dict[str, str], input_string: str, template_name: str = None) -> Dict[str, Any]:
+        if template_name and template_name in self.MODEL_REGISTRY:
+            DynamicModel = self.MODEL_REGISTRY[template_name]
+        else:
+            type_mapping = {
+                'str': str,
+                'float': float,
+                'bool': bool
+            }
 
-        fields = {
-            key: (type_mapping[value], ...) for key, value in template_content.items()
-        }
+            fields = {
+                key: (type_mapping[value], ...) for key, value in template_content.items()
+            }
 
-        DynamicModel = create_model('DynamicModel', **fields)
+            DynamicModel = create_model('DynamicModel', **fields)
 
         try:
             completion = self.client.beta.chat.completions.parse(

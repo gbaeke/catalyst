@@ -6,3 +6,4 @@ dev-idpdemo.yaml
 __pycache__
 .dapr/
 dapr.yaml
+.env

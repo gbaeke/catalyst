@@ -203,10 +203,8 @@ def check_template_exists(template_name: str) -> Tuple[Optional[Dict[str, Any]],
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...), template_name: str = Form(...)):
     try:
-        # Check if the template exists
-        template_data, error = check_template_exists(template_name)
-        if error:
-            return JSONResponse(content={"message": f"Template error: {error}"}, status_code=400)
+        # we do not check here if the template exists because template might
+        # be pointing to a static model
 
         # upload to azure
         blob_name = await upload_to_azure(storage_account_name, container_name, storage_account_key, file)
