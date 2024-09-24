@@ -101,10 +101,11 @@ async def consume_orders(event: CloudEvent):
     
     try:
         # use the appropriate cracker to extract the text from the file
+        logging.info(f"Using cracker: {settings.cracker_type}")
         cracker = CrackerFactory.get_cracker(settings.cracker_type)
         lines_str = cracker.crack(file_content)
 
-        logging.info("Document Intelligence processing completed successfully.")
+        logging.info(f"{settings.cracker_type.capitalize()} processing completed successfully.")
 
         # retrieve the template from the kvstore
         template_content = None

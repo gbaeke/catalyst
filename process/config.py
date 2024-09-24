@@ -29,7 +29,7 @@ class Settings(BaseModel):
     output_handler_types: list[str] = Field(default_factory=lambda: os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher').split(','))
     event_grid_topic_endpoint: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_ENDPOINT', ''))
     event_grid_topic_key: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_KEY', ''))
-    cracker_type: str = Field(default_factory=lambda: os.getenv('CRACKER_TYPE', 'document_intelligence'))
+    cracker_type: str = Field(default_factory=lambda: os.getenv('CRACKER_TYPE', 'tika'))
 
     @field_validator('pubsub_name', 'kvstore_name', 'storage_account_name', 'storage_account_key', 'container_name', mode='before')
     def check_required_variables(cls, v, field):
