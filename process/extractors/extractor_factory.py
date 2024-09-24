@@ -1,18 +1,21 @@
-from .base_extractor import BaseInvoiceExtractor
-from .openai_extractor import OpenAIInvoiceExtractor
-from .groq_extractor import GroqInvoiceExtractor
+from .base_extractor import BaseExtractor
+from .openai_extractor import OpenAIExtractor
+from .groq_extractor import GroqExtractor
+from .ollama_extractor import OllamaExtractor  # Import the new extractor
 import os
 
-class InvoiceExtractorFactory:
+class ExtractorFactory:
     @staticmethod
-    def get_extractor(extractor_type: str = None) -> BaseInvoiceExtractor:
+    def get_extractor(extractor_type: str = None) -> BaseExtractor:
         if extractor_type is None:
-            extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'openai')
+            extractor_type = os.getenv('EXTRACTOR_TYPE', 'openai')
 
         if extractor_type.lower() == 'openai':
-            return OpenAIInvoiceExtractor()
+            return OpenAIExtractor()
         elif extractor_type.lower() == 'groq':
-            return GroqInvoiceExtractor()
+            return GroqExtractor()
+        elif extractor_type.lower() == 'ollama':  # Add the new extractor type
+            return OllamaExtractor()
         # Add more extractors here as needed
         else:
             raise ValueError(f"Unsupported extractor type: {extractor_type}")

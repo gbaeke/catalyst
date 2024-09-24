@@ -1,11 +1,11 @@
-from .base_extractor import BaseInvoiceExtractor
+from .base_extractor import BaseExtractor
 from typing import Dict, Any
 import logging
 from groq import Groq
 import os
 import json
 
-class GroqInvoiceExtractor(BaseInvoiceExtractor):
+class GroqExtractor(BaseExtractor):
     def __init__(self):
         self.client = Groq(api_key=os.getenv('GROQ_API_KEY'))
         pass

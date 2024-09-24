@@ -30,6 +30,9 @@ class Settings(BaseModel):
     event_grid_topic_endpoint: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_ENDPOINT', ''))
     event_grid_topic_key: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_KEY', ''))
     cracker_type: str = Field(default_factory=lambda: os.getenv('CRACKER_TYPE', 'tika'))
+    ollama_model: str = Field(default_factory=lambda: os.getenv('OLLAMA_MODEL', 'phi3'))
+
+    
 
     @field_validator('pubsub_name', 'kvstore_name', 'storage_account_name', 'storage_account_key', 'container_name', mode='before')
     def check_required_variables(cls, v, field):

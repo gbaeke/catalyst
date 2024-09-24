@@ -1,4 +1,4 @@
-from .base_extractor import BaseInvoiceExtractor
+from .base_extractor import BaseExtractor
 from typing import Dict, Any, Type
 from openai import AzureOpenAI
 from pydantic import create_model, BaseModel
@@ -6,7 +6,7 @@ import logging
 import os
 from .models.static_invoice import Model  # Updated import path
 
-class OpenAIInvoiceExtractor(BaseInvoiceExtractor):
+class OpenAIExtractor(BaseExtractor):
     # Define MODEL_REGISTRY within the class
     MODEL_REGISTRY = {
         'static_invoice': Model,

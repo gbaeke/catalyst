@@ -7,8 +7,8 @@ from typing import Any, Dict
 from azure.storage.blob import BlobServiceClient
 import requests
 from output_handlers.handler_factory import OutputHandlerFactory
-from extractors.extractor_factory import InvoiceExtractorFactory
-from extractors.openai_extractor import OpenAIInvoiceExtractor
+from extractors.extractor_factory import ExtractorFactory
+from extractors.openai_extractor import OpenAIExtractor
 from config import settings  # gets settings from environment variables
 from crackers.cracker_factory import CrackerFactory
 
@@ -44,7 +44,7 @@ class CloudEvent(BaseModel):
     traceid: str
 
 def extract_invoice_details(template_content: Dict[str, str], input_string: str, template_name: str):
-    extractor = InvoiceExtractorFactory.get_extractor(settings.extractor_type)
+    extractor = ExtractorFactory.get_extractor(settings.extractor_type)
     return extractor.extract(template_content, input_string, template_name)
 
 def retrieve_file_from_azure(storage_account_name: str, container_name: str, storage_account_key: str, blob_name: str) -> bytes:
@@ -109,7 +109,7 @@ async def consume_orders(event: CloudEvent):
 
         # retrieve the template from the kvstore
         template_content = None
-        if template_name not in OpenAIInvoiceExtractor.MODEL_REGISTRY:
+        if template_name not in OpenAIExtractor.MODEL_REGISTRY:
             logging.info(f"Using model from KV store: {template_name}")
             template_content = retrieve_template_from_kvstore(template_name)
             logging.info(f"Template retrieved from KV store: {template_content}")
