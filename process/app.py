@@ -5,14 +5,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Any, Dict
 from azure.storage.blob import BlobServiceClient
-from azure.ai.documentintelligence import DocumentIntelligenceClient
-from azure.ai.documentintelligence.models import AnalyzeResult, AnalyzeDocumentRequest
-from azure.core.credentials import AzureKeyCredential
 import requests
 from output_handlers.handler_factory import OutputHandlerFactory
 from extractors.extractor_factory import InvoiceExtractorFactory
 from extractors.openai_extractor import OpenAIInvoiceExtractor
 from config import settings  # gets settings from environment variables
+from crackers.cracker_factory import CrackerFactory
 
 app = FastAPI()
 
@@ -102,28 +100,9 @@ async def consume_orders(event: CloudEvent):
         raise FileNotFoundError(f"Failed to retrieve file from Azure Blob Storage: {blob_name}")
     
     try:
-        # use Azure Document Intelligence to extract the text from the file
-        document_intelligence_client = DocumentIntelligenceClient(
-            endpoint=settings.docint_url, credential=AzureKeyCredential(settings.docint_key)
-        )
-
-        doc_request = AnalyzeDocumentRequest(bytes_source=file_content)
-
-        poller = document_intelligence_client.begin_analyze_document(
-            "prebuilt-layout", doc_request
-        )
-
-        logging.info("Document Intelligence processing started.")
-        result: AnalyzeResult = poller.result(timeout=10)
-        logging.info("Document Intelligence processing completed successfully.")
-        
-        # extract all lines and add them to one string
-        try:
-            lines = [line.content for page in result.pages for line in page.lines]
-            lines_str = "\n".join(lines)
-        except Exception as e:
-            logging.error(f"Could not extract text from document: {str(e)}")
-            raise
+        # use the appropriate cracker to extract the text from the file
+        cracker = CrackerFactory.get_cracker(settings.cracker_type)
+        lines_str = cracker.crack(file_content)
 
         logging.info("Document Intelligence processing completed successfully.")
 

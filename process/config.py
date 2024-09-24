@@ -29,13 +29,19 @@ class Settings(BaseModel):
     output_handler_types: list[str] = Field(default_factory=lambda: os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher').split(','))
     event_grid_topic_endpoint: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_ENDPOINT', ''))
     event_grid_topic_key: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_KEY', ''))
+    cracker_type: str = Field(default_factory=lambda: os.getenv('CRACKER_TYPE', 'document_intelligence'))
 
-
-
-    @field_validator('docint_key', 'docint_url', 'pubsub_name', mode='before')
-    def check_docint_variables(cls, v, values):
+    @field_validator('pubsub_name', 'kvstore_name', 'storage_account_name', 'storage_account_key', 'container_name', mode='before')
+    def check_required_variables(cls, v, field):
         if not v:
-            raise ValueError('docint_key, docint_url, and pubsub_name must be set')
+            raise ValueError(f'{field.name} must be set')
+        return v
+
+
+    @field_validator('docint_key', 'docint_url', mode='before')
+    def check_docint_variables(cls, v, values):
+        if values.get('cracker_type') == 'document_intelligence' and not v:
+            raise ValueError('docint_key and docint_url must be set when cracker_type is "document_intelligence"')
         return v
 
     @field_validator('azure_openai_key', 'azure_openai_endpoint', 'azure_openai_model', 'azure_openai_api_version', mode='before')
