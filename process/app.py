@@ -1,4 +1,3 @@
-import os
 import logging
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, FileResponse
@@ -13,38 +12,7 @@ import requests
 from output_handlers.handler_factory import OutputHandlerFactory
 from extractors.extractor_factory import InvoiceExtractorFactory
 from extractors.openai_extractor import OpenAIInvoiceExtractor
-
-# Set up required inputs for http client to perform service invocation
-dapr_http_port = os.getenv('DAPR_HTTP_PORT', '3500')
-dapr_http_endpoint = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
-dapr_api_token = os.getenv('DAPR_API_TOKEN', '')
-pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub-azure')
-storage_account_name = os.getenv('STORAGE_ACCOUNT_NAME', '')
-storage_account_key = os.getenv('STORAGE_ACCOUNT_KEY', '')
-container_name = os.getenv('CONTAINER_NAME', '')
-docint_key = os.getenv('DOCINT_KEY', '')
-docint_url = os.getenv('DOCINT_URL', '')
-openai_key = os.getenv('OPENAI_KEY', '')
-kvstore_name = os.getenv('KVSTORE_NAME', 'kvstore')
-invoke_target_appid = os.getenv('INVOKE_APPID', 'upload')
-azure_openai_key = os.getenv('AZURE_OPENAI_KEY', '')
-azure_openai_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT', '')
-azure_openai_model = os.getenv('AZURE_OPENAI_MODEL', '')
-azure_openai_api_version = os.getenv('AZURE_OPENAI_API_VERSION', '')
-# Add Pusher environment variables
-pusher_app_id = os.getenv('PUSHER_APP_ID', '')
-pusher_key = os.getenv('PUSHER_KEY', '')
-pusher_secret = os.getenv('PUSHER_SECRET', '')
-pusher_cluster = os.getenv('PUSHER_CLUSTER', 'eu')
-pusher_channel = os.getenv('PUSHER_CHANNEL', 'docproc')
-
-# Add this new environment variable
-extractor_type = os.getenv('INVOICE_EXTRACTOR_TYPE', 'openai')
-output_handler_types = os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher').split(',')
-
-# Add these environment variables
-event_grid_topic_endpoint = os.getenv('EVENT_GRID_TOPIC_ENDPOINT', '')
-event_grid_topic_key = os.getenv('EVENT_GRID_TOPIC_KEY', '')
+from config import settings  # gets settings from environment variables
 
 app = FastAPI()
 
@@ -78,7 +46,7 @@ class CloudEvent(BaseModel):
     traceid: str
 
 def extract_invoice_details(template_content: Dict[str, str], input_string: str, template_name: str):
-    extractor = InvoiceExtractorFactory.get_extractor(extractor_type)
+    extractor = InvoiceExtractorFactory.get_extractor(settings.extractor_type)
     return extractor.extract(template_content, input_string, template_name)
 
 def retrieve_file_from_azure(storage_account_name: str, container_name: str, storage_account_key: str, blob_name: str) -> bytes:
@@ -96,13 +64,13 @@ def retrieve_file_from_azure(storage_account_name: str, container_name: str, sto
         return None
     
 def retrieve_template_from_kvstore(template_name: str):
-    headers = {'dapr-app-id': invoke_target_appid, 'content-type': 'application/json'}
-    if dapr_api_token:
-        headers['dapr-api-token'] = dapr_api_token
+    headers = {'dapr-app-id': settings.invoke_target_appid, 'content-type': 'application/json'}
+    if settings.dapr_api_token:
+        headers['dapr-api-token'] = settings.dapr_api_token
 
     try:
         result = requests.get(
-            url=f'{dapr_http_endpoint}{":" + dapr_http_port if not dapr_api_token else ""}/template/{template_name}',
+            url=f'{settings.dapr_http_endpoint}{":" + settings.dapr_http_port if not settings.dapr_api_token else ""}/template/{template_name}',
             headers=headers,
             timeout=60
         )
@@ -127,7 +95,7 @@ async def consume_orders(event: CloudEvent):
     logging.info(f'Invoice received: {blob_name}, Template name: {template_name}')
 
     # retrieve the file from the blob storage
-    file_content = retrieve_file_from_azure(storage_account_name, container_name, storage_account_key, blob_name)
+    file_content = retrieve_file_from_azure(settings.storage_account_name, settings.container_name, settings.storage_account_key, blob_name)
     
     if file_content is None:
         logging.error(f"Failed to retrieve file from Azure Blob Storage: {blob_name}")
@@ -136,7 +104,7 @@ async def consume_orders(event: CloudEvent):
     try:
         # use Azure Document Intelligence to extract the text from the file
         document_intelligence_client = DocumentIntelligenceClient(
-            endpoint=docint_url, credential=AzureKeyCredential(docint_key)
+            endpoint=settings.docint_url, credential=AzureKeyCredential(settings.docint_key)
         )
 
         doc_request = AnalyzeDocumentRequest(bytes_source=file_content)
@@ -179,7 +147,7 @@ async def consume_orders(event: CloudEvent):
             logging.info(f"Extracted invoice details: {invoice_details}")
 
             # Use the appropriate output handlers
-            output_handlers = OutputHandlerFactory.get_handlers(output_handler_types)
+            output_handlers = OutputHandlerFactory.get_handlers(settings.output_handler_types)
             for handler in output_handlers:
                 handler.handle_output(blob_name, invoice_details)
     except Exception as e:
@@ -196,9 +164,10 @@ async def consume_orders(event: CloudEvent):
 # this is used when you use Dapr directly instead of catalyst
 @app.get("/dapr/subscribe")
 async def subscribe():
+    logging.info(f"Subscribing to topic 'invoices' with pubsub name '{settings.pubsub_name}' and route '/process'")
     subscriptions = [
         {
-            'pubsubname': pubsub_name,
+            'pubsubname': settings.pubsub_name,
             'topic': 'invoices',
             'route': '/process'
         }

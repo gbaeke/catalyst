@@ -1,0 +1,4 @@
+/.dapr
+*.pdf
+*.http
+client.py
