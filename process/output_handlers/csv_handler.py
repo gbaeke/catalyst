@@ -13,7 +13,7 @@ class CSVOutputHandler(BaseOutputHandler):
         try:
             # Convert Pydantic model to dict if necessary
             if isinstance(invoice_details, BaseModel):
-                invoice_details = invoice_details.dict()
+                invoice_details = invoice_details.model_dump()
 
             # Format invoice details as a single string
             details_str = ' '.join([f"{k}={v!r}" for k, v in invoice_details.items()])
