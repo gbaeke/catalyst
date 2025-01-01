@@ -7,8 +7,6 @@ import os
 class ExtractorFactory:
     @staticmethod
     def get_extractor(extractor_type: str = None) -> BaseExtractor:
-        if extractor_type is None:
-            extractor_type = os.getenv('EXTRACTOR_TYPE', 'openai')
 
         if extractor_type.lower() == 'openai':
             return OpenAIExtractor()

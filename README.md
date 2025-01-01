@@ -67,6 +67,7 @@ azure-ai-documentintelligence==1.0.0b3
 azure-core==1.30.2
 azure-storage-blob==12.22.0
 groq==0.11.0
+ollama==0.4.5
 ```
 
 You can install the packages with the following command:
@@ -118,3 +119,71 @@ apps:
 ```
 
 To run the app with Dapr, make sure Dapr is installed and Docker is running with Redis. The default statestore and pubsub names use Redis. Run the app with `dapr run -f .`
+
+## Crackers
+
+Crackers are used to **crack** a document type and covert it to text. The following crackers are supported:
+
+- Azure Document Intelligence
+- Apache Tika
+
+To configure the cracker, set the `CRACKER_TYPE` environment variable to the desired cracker type:
+
+- document_intelligence
+- tika
+
+If you use the `document_intelligence` cracker, you need to set the `DOCINT_KEY` and `DOCINT_URL` environment variables. These are the API key and endpoint URL for the Azure Document Intelligence service.
+
+When you use the `tika` cracker, you need to run the Tika server locally. You can do this by running the following command:
+
+```bash
+docker run -d -p 9998:9998 apache/tika:latest
+```
+
+This will start the Tika server and you can use it to crack documents. At present, you cannot configure the Tika URL.
+
+## Extractors
+
+Extractors are used to **extract** data from a document. The following extractors are supported:
+
+- OpenAI
+- Groq
+- Ollama
+
+To configure the extractor, set the `EXTRACTOR_TYPE` environment variable to the desired extractor type:
+
+- openai
+- groq
+- ollama
+
+To use the `openai` extractor, you need to set several environment variables:
+
+- AZURE_OPENAI_KEY
+- AZURE_OPENAI_ENDPOINT
+- AZURE_OPENAI_MODEL
+- AZURE_OPENAI_API_VERSION
+
+Only Azure OpenAI is supported at present.
+
+The OpenAI extractor uses structured outputs.
+
+To use the `groq` extractor, you need to set the `GROQ_API_KEY` environment variable. This is the API key for the Groq service.
+
+The Groq extractor uses JSON mode, not structured outputs.
+
+To use the `ollama` extractor, you need to set the `OLLAMA_MODEL` environment variable. This is the model to use for the Ollama service. Ensure Ollama is running and the model is available.
+
+The Ollama extractor uses structured outputs, similar to the OpenAI extractor. 
+
+**Note:** You can use the OpenAI compatibility of Ollama to work with structured outputs. Here, we have used the ollama Python package to work with structured outputs.
+
+## Output handlers
+
+Output handlers are used to **handle** the output of the extractor. The following output handlers are supported:
+
+- pusher: uses the Pusher service to send the output to a channel
+- json: writes the output to a JSON file
+- csv: writes the output to a CSV file
+- event_grid: sends the output to an Azure Event Grid topic
+
+You can use multiple output handlers at the same time. For example, you can use the `pusher` and `json` output handlers to send the output to a channel and write it to a JSON file.

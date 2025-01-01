@@ -12,7 +12,7 @@ class GroqExtractor(BaseExtractor):
 
     def extract(self, template_content: Dict[str, str], input_string: str, template_name: str = None) -> Dict[str, Any]:
         # template_content could be none if we are using a static model
-        if template_content is None:
+        if not template_content:
             raise ValueError("Template content is required for GROQ extraction.")
         
         # generate the prompt that includes the fields to extract
