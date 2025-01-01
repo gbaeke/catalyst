@@ -9,6 +9,7 @@ from azure.storage.blob import BlobServiceClient
 import uuid
 import json
 from typing import Dict, Any, Tuple, Optional
+from fastapi.middleware.cors import CORSMiddleware
 
 # Set up required inputs for http client to perform service invocation
 pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub-azure')
@@ -26,6 +27,15 @@ class Invoice(BaseModel):
     template_name: str  # Added template_name field
 
 app = FastAPI()
+
+# Add CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 logging.basicConfig(level=logging.INFO)
 
