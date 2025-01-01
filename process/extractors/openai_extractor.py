@@ -42,7 +42,7 @@ class OpenAIExtractor(BaseExtractor):
                 model="gpt-4o",
                 response_format=DynamicModel,
                 messages=[
-                    {"role": "system", "content": "Extract invoice details"},
+                    {"role": "system", "content": "Extract document details"},
                     {"role": "user", "content": input_string},
                 ],
                 max_tokens=2000,
@@ -53,7 +53,7 @@ class OpenAIExtractor(BaseExtractor):
             if message.parsed:
                 return message.parsed
             else:
-                logging.error("No invoice details extracted from the document.")
+                logging.error("No details extracted from the document.")
                 return None
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")

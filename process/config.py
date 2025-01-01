@@ -29,8 +29,8 @@ class Settings(BaseModel):
     output_handler_types: list[str] = Field(default_factory=lambda: os.getenv('INVOICE_OUTPUT_HANDLER', 'pusher').split(','))
     event_grid_topic_endpoint: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_ENDPOINT', ''))
     event_grid_topic_key: str = Field(default_factory=lambda: os.getenv('EVENT_GRID_TOPIC_KEY', ''))
-    cracker_type: str = Field(default_factory=lambda: os.getenv('CRACKER_TYPE', 'tika'))
-    ollama_model: str = Field(default_factory=lambda: os.getenv('OLLAMA_MODEL', 'phi3'))
+    cracker_type: str = Field(default_factory=lambda: os.getenv('CRACKER_TYPE', 'document_intelligence'))
+    ollama_model: str = Field(default_factory=lambda: os.getenv('OLLAMA_MODEL', 'llama3.1'))
 
     
 
