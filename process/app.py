@@ -158,11 +158,6 @@ async def subscribe():
 async def read_index():
     return FileResponse("static/index.html")
 
-@app.post("/extract")
-async def extract_invoice(template_content: Dict[str, str], input_string: str, model_name: str = None):
-    result = extract_invoice_details(template_content, input_string)
-    return result
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
