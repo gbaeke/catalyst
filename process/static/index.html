@@ -150,6 +150,70 @@
             color: var(--error-color);
             margin: 10px 0;
         }
+
+        .template-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .template-form, .template-check {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 500px;
+        }
+
+        .input-field {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 16px;
+        }
+
+        .template-fields {
+            display: grid;
+            gap: 10px;
+        }
+
+        .field-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .field-item input {
+            flex: 1;
+        }
+
+        .secondary-button {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid var(--border-color);
+        }
+
+        .field-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .field-row select {
+            margin-bottom: 0;
+            max-width: 100px;
+        }
+
+        .remove-field {
+            background: none;
+            border: none;
+            color: var(--error-color);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0 5px;
+        }
     </style>
 </head>
 <body>
@@ -157,13 +221,15 @@
     
     <div class="tabs">
         <button class="tab active" onclick="switchTab('upload')">Upload Documents</button>
+        <button class="tab" onclick="switchTab('templates')">Manage Templates</button>
         <button class="tab" onclick="switchTab('dashboard')">Processing Dashboard</button>
     </div>
 
     <div id="upload" class="tab-content active">
-        <select id="templateSelect">
-            <option value="">Select a template...</option>
-        </select>
+        <input type="text" 
+               id="templateInput" 
+               placeholder="Enter template name" 
+               class="input-field">
 
         <div class="upload-area" id="dropZone">
             <p>Drag and drop files here or</p>
@@ -180,6 +246,32 @@
         </button>
 
         <div id="uploadStatus"></div>
+    </div>
+
+    <div id="templates" class="tab-content">
+        <div class="template-section">
+            <h2>Add New Template</h2>
+            <div class="template-form">
+                <input type="text" id="templateName" placeholder="Template name" class="input-field">
+                
+                <div id="templateFields">
+                    <div class="field-list"></div>
+                    <button class="button secondary-button" onclick="addField()">Add Field</button>
+                </div>
+                
+                <button class="button primary-button" onclick="submitTemplate()">Create Template</button>
+            </div>
+            <div id="templateStatus"></div>
+        </div>
+
+        <div class="template-section">
+            <h2>Check Template</h2>
+            <div class="template-check">
+                <input type="text" id="checkTemplateName" placeholder="Template name" class="input-field">
+                <button class="button primary-button" onclick="checkTemplate()">Check Template</button>
+            </div>
+            <div id="checkTemplateStatus"></div>
+        </div>
     </div>
 
     <div id="dashboard" class="tab-content">
@@ -231,21 +323,6 @@
         const uploadButton = document.getElementById('uploadButton');
         const fileList = document.getElementById('fileList');
         const uploadStatus = document.getElementById('uploadStatus');
-
-        // Initialize fixed templates
-        function initializeTemplates() {
-            const templates = ['simple', 'more', 'days'];
-            const select = document.getElementById('templateSelect');
-            templates.forEach(template => {
-                const option = document.createElement('option');
-                option.value = template;
-                option.textContent = template;
-                select.appendChild(option);
-            });
-        }
-
-        // Initialize templates
-        initializeTemplates();
 
         // File drag and drop handlers
         dropZone.addEventListener('dragover', (e) => {
@@ -300,9 +377,9 @@
         }
 
         uploadButton.addEventListener('click', async () => {
-            const template = document.getElementById('templateSelect').value;
+            const template = document.getElementById('templateInput').value;
             if (!template) {
-                uploadStatus.innerHTML = '<p class="error-message">Please select a template</p>';
+                uploadStatus.innerHTML = '<p class="error-message">Please enter a template name</p>';
                 return;
             }
 
@@ -355,6 +432,107 @@
             updateFileList();
             uploadButton.style.display = 'none';
         });
+
+        function addField() {
+            const fieldList = document.querySelector('.field-list');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="text" 
+                       placeholder="Field name" 
+                       class="input-field field-name">
+                <select class="input-field field-type">
+                    <option value="str">str</option>
+                    <option value="float">float</option>
+                    <option value="bool">bool</option>
+                </select>
+                <button class="remove-field" onclick="removeField(this)">×</button>
+            `;
+            fieldList.appendChild(fieldRow);
+        }
+
+        function removeField(button) {
+            button.parentElement.remove();
+        }
+
+        async function submitTemplate() {
+            const templateName = document.getElementById('templateName').value;
+            const statusDiv = document.getElementById('templateStatus');
+            const fieldRows = document.querySelectorAll('.field-row');
+
+            if (!templateName) {
+                statusDiv.innerHTML = '<p class="error-message">Please enter a template name</p>';
+                return;
+            }
+
+            if (fieldRows.length === 0) {
+                statusDiv.innerHTML = '<p class="error-message">Please add at least one field</p>';
+                return;
+            }
+
+            const templateData = {
+                template_name: templateName
+            };
+
+            // Collect field data
+            fieldRows.forEach(row => {
+                const fieldName = row.querySelector('.field-name').value;
+                const fieldType = row.querySelector('.field-type').value;
+                
+                if (fieldName) {
+                    templateData[fieldName] = fieldType;
+                }
+            });
+
+            try {
+                const response = await fetch('http://localhost:8000/template/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(templateData)
+                });
+
+                if (response.ok) {
+                    statusDiv.innerHTML = '<p class="success-message">Template created successfully</p>';
+                    // Clear form
+                    document.getElementById('templateName').value = '';
+                    document.querySelector('.field-list').innerHTML = '';
+                } else {
+                    const error = await response.text();
+                    statusDiv.innerHTML = `<p class="error-message">Error creating template: ${error}</p>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error-message">Network error: ${error.message}</p>`;
+            }
+        }
+
+        async function checkTemplate() {
+            const templateName = document.getElementById('checkTemplateName').value;
+            const statusDiv = document.getElementById('checkTemplateStatus');
+
+            if (!templateName) {
+                statusDiv.innerHTML = '<p class="error-message">Please enter a template name</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/template/${templateName}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    statusDiv.innerHTML = '<p class="success-message">Template exists</p>';
+                } else {
+                    statusDiv.innerHTML = '<p class="error-message">Template not found</p>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error-message">Network error: ${error.message}</p>`;
+            }
+        }
     </script>
 </body>
 </html>

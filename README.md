@@ -186,6 +186,57 @@ Run the app with `dapr run -f .`
 
 Open the UI at http://localhost:8001/ui. You should be able to upload a document and see the output in the UI. The dashboard requires Pusher and only grabs real-time data. When you refresh the page or you click Clear All Events button, the data will be lost.
 
+## How to use the app?
+
+When you upload a document, you need to specify a template to use. Templates contain the fields you want to extract from the document. To create a template, use the `/template/` endpoint of the upload service. In the `upload` folder, you will find a .http file that contains an example request. To work with .http files, you can use the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension for VS Code.
+
+```bash
+POST http://localhost:8000/template/
+Content-Type: application/json
+Accept: application/json
+
+{
+  "month": "str",
+  "days_worked": "str",
+  "amount": "float",
+  "vat": "float",
+  "total": "float",
+  "template_name": "days"
+}
+```
+
+Above, the template name is `days`. The other fields are the fields you want to extract from the document. The type of the field is the type of the data you want to extract. You can only use the following types: `str`, `float`, `bool`. The endpoint does not check if the types are valid.
+
+To check if the template exists, do the following:
+
+```bash
+GET http://localhost:8000/template/days
+Accept: application/json
+```
+
+To upload a document, use the upload endpoint. In the `upload` folder, you will find a .http file that contains an example request:
+
+```bash
+POST http://localhost:8000/upload/
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="invoice.pdf"
+Content-Type: application/pdf
+
+< ./invoice.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="template_name"
+
+days
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+```
+
+The above request will upload the `invoice.pdf` file and use the `days` template to extract the data from the document. Depending on how you configure the app, you might see the output in the UI or in a CSV file.
+
+When you send the results to a CSV or JSONL file, the files will be written to the `process` directory as `invoice_details.csv` and/or `invoice_details.jsonl`.
+
+
 ## Crackers
 
 Crackers are used to **crack** a document type and covert it to text. The following crackers are supported:
