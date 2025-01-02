@@ -4,6 +4,18 @@
 
 This is a demo of a document processing pipeline that uses Dapr to orchestrate an asynchronous pipeline of document processing tasks. Depending on how you configure the app, you might need the following services:
 
+## Table of Contents
+- [Required Services](#required-services)
+- [Running the Application](#running-the-application)
+  - [Run with Catalyst](#run-with-catalyst)
+  - [Run with Dapr](#run-with-dapr)
+- [Components](#components)
+  - [Crackers](#crackers)
+  - [Extractors](#extractors)
+  - [Output Handlers](#output-handlers)
+
+## Required Services
+
 - Dapr: uses the state store and pub/sub broker
 - Azure Document Intelligence: used to crack documents
 - Azure OpenAI: used to extract data from documents
