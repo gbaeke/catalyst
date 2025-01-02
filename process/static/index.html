@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Processing System</title>
+    <title>Document Processing with LLMs</title>
     <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
     <style>
         :root {
@@ -153,7 +153,7 @@
     </style>
 </head>
 <body>
-    <h1>Invoice Processing System</h1>
+    <h1>Document Processing with LLMs</h1>
     
     <div class="tabs">
         <button class="tab active" onclick="switchTab('upload')">Upload Documents</button>
@@ -234,7 +234,7 @@
 
         // Initialize fixed templates
         function initializeTemplates() {
-            const templates = ['simple', 'more'];
+            const templates = ['simple', 'more', 'days'];
             const select = document.getElementById('templateSelect');
             templates.forEach(template => {
                 const option = document.createElement('option');
@@ -268,6 +268,9 @@
         });
 
         function handleFiles(fileList) {
+            // Clear any previous status messages
+            uploadStatus.innerHTML = '';
+            
             for (const file of fileList) {
                 if (file.type === 'application/pdf') {
                     files.set(file.name, file);
@@ -327,7 +330,7 @@
                     const responseText = await response.text();
                     console.log(`Response body for ${name}:`, responseText);
 
-                    if (response.ok) {  // This should work since 200 is considered "ok"
+                    if (response.ok) {
                         successCount++;
                     } else {
                         errorCount++;
@@ -344,7 +347,11 @@
                 ${errorCount > 0 ? `<p class="error-message">Failed to upload ${errorCount} files</p>` : ''}
             `;
 
+            // Clear the files Map
             files.clear();
+            // Reset the file input
+            document.getElementById('fileInput').value = '';
+            // Update the UI
             updateFileList();
             uploadButton.style.display = 'none';
         });

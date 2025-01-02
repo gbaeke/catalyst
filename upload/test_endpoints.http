@@ -23,11 +23,12 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "customer_name": "str",
-  "customer_address": "str",
-  "invoice_total": "float",
-  "invoice_or_not": "bool",
-  "template_name": "more"
+  "month": "str",
+  "days_worked": "str",
+  "amount": "float",
+  "vat": "float",
+  "total": "float",
+  "template_name": "days"
 }
 
 ###
