@@ -3,63 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Processor Dashboard</title>
+    <title>Document Processing with LLMs</title>
     <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
     <style>
+        :root {
+            --primary-color: #1890ff;
+            --secondary-color: #e6f7ff;
+            --border-color: #ddd;
+            --error-color: #ff4d4f;
+            --success-color: #52c41a;
+        }
+
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             margin: 0; 
             padding: 20px; 
             background-color: #f0f8ff; 
             color: #333;
         }
+
         h1 { 
             color: #4a4a4a; 
             text-align: center;
             margin-bottom: 20px;
         }
-        #events { 
-            border: 1px solid #ddd; 
-            padding: 10px; 
-            margin-top: 20px; 
-            background-color: #ffffff;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
         }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: -2px;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        #events { 
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
         .event-item {
-            background-color: #e6f7ff;
-            border-left: 5px solid #1890ff;
-            padding: 10px;
+            background-color: var(--secondary-color);
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
             margin-bottom: 10px;
             border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
         }
-        #clearButton {
-            display: block;
-            margin: 20px auto;
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: var(--secondary-color);
+        }
+
+        .file-list {
+            margin: 20px 0;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+
+        .file-item .remove-file {
+            margin-left: auto;
+            color: var(--error-color);
+            cursor: pointer;
+        }
+
+        .button {
             padding: 10px 20px;
-            background-color: #ff4d4f;
-            color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s;
         }
-        #clearButton:hover {
-            background-color: #ff7875;
+
+        .primary-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .danger-button {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .success-message {
+            color: var(--success-color);
+            margin: 10px 0;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <h1>Invoice Processor Dashboard</h1>
-    <button id="clearButton">Clear All Events</button>
-    <div id="events"></div>
+    <h1>Document Processing with LLMs</h1>
+    
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('upload')">Upload Documents</button>
+        <button class="tab" onclick="switchTab('dashboard')">Processing Dashboard</button>
+    </div>
+
+    <div id="upload" class="tab-content active">
+        <select id="templateSelect">
+            <option value="">Select a template...</option>
+        </select>
+
+        <div class="upload-area" id="dropZone">
+            <p>Drag and drop files here or</p>
+            <input type="file" id="fileInput" multiple style="display: none">
+            <button class="button primary-button" onclick="document.getElementById('fileInput').click()">
+                Choose Files
+            </button>
+        </div>
+
+        <div id="fileList" class="file-list"></div>
+        
+        <button id="uploadButton" class="button primary-button" style="display: none">
+            Upload Files
+        </button>
+
+        <div id="uploadStatus"></div>
+    </div>
+
+    <div id="dashboard" class="tab-content">
+        <button id="clearButton" class="button danger-button">Clear All Events</button>
+        <div id="events"></div>
+    </div>
 
     <script>
         // Enable pusher logging - don't include this in production
         Pusher.logToConsole = true;
 
-        var pusherKey = prompt("Please enter your Pusher key:");
+        var pusherKey = localStorage.getItem('pusherKey') || prompt("Please enter your Pusher key:");
+        localStorage.setItem('pusherKey', pusherKey);
+
         var pusher = new Pusher(pusherKey, {
             cluster: 'eu'
         });
@@ -69,13 +203,157 @@
             var eventsDiv = document.getElementById('events');
             var eventElement = document.createElement('div');
             eventElement.className = 'event-item';
-            eventElement.innerHTML = '<strong>New Invoice Processed:</strong> ' + 
-                                     JSON.stringify(data, null, 2);
+            eventElement.textContent = JSON.stringify(data, null, 2);
             eventsDiv.prepend(eventElement);
         });
 
+        // Clear events
         document.getElementById('clearButton').addEventListener('click', function() {
             document.getElementById('events').innerHTML = '';
+        });
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        }
+
+        // File handling
+        const files = new Map();
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const fileList = document.getElementById('fileList');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        // Initialize fixed templates
+        function initializeTemplates() {
+            const templates = ['simple', 'more', 'days'];
+            const select = document.getElementById('templateSelect');
+            templates.forEach(template => {
+                const option = document.createElement('option');
+                option.value = template;
+                option.textContent = template;
+                select.appendChild(option);
+            });
+        }
+
+        // Initialize templates
+        initializeTemplates();
+
+        // File drag and drop handlers
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(fileList) {
+            // Clear any previous status messages
+            uploadStatus.innerHTML = '';
+            
+            for (const file of fileList) {
+                if (file.type === 'application/pdf') {
+                    files.set(file.name, file);
+                    updateFileList();
+                }
+            }
+            uploadButton.style.display = files.size > 0 ? 'block' : 'none';
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            files.forEach((file, name) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    ${name}
+                    <span class="remove-file" onclick="removeFile('${name}')">✕</span>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function removeFile(name) {
+            files.delete(name);
+            updateFileList();
+            uploadButton.style.display = files.size > 0 ? 'block' : 'none';
+        }
+
+        uploadButton.addEventListener('click', async () => {
+            const template = document.getElementById('templateSelect').value;
+            if (!template) {
+                uploadStatus.innerHTML = '<p class="error-message">Please select a template</p>';
+                return;
+            }
+
+            uploadStatus.innerHTML = '';
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const [name, file] of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('template_name', template);
+
+                try {
+                    const response = await fetch('http://localhost:8000/upload/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    console.log(`Upload response for ${name}:`, {
+                        status: response.status,
+                        ok: response.ok,
+                        statusText: response.statusText
+                    });
+
+                    const responseText = await response.text();
+                    console.log(`Response body for ${name}:`, responseText);
+
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        console.error(`Error uploading ${name}: Status ${response.status}, Text: ${responseText}`);
+                    }
+                } catch (error) {
+                    errorCount++;
+                    console.error(`Network error uploading ${name}:`, error);
+                }
+            }
+
+            uploadStatus.innerHTML = `
+                <p class="success-message">Successfully uploaded ${successCount} files</p>
+                ${errorCount > 0 ? `<p class="error-message">Failed to upload ${errorCount} files</p>` : ''}
+            `;
+
+            // Clear the files Map
+            files.clear();
+            // Reset the file input
+            document.getElementById('fileInput').value = '';
+            // Update the UI
+            updateFileList();
+            uploadButton.style.display = 'none';
         });
     </script>
 </body>
