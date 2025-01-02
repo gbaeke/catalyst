@@ -1,4 +1,4 @@
-# Catalyst demo: LLM document extraction asynchronous pipeline
+# LLM document extraction asynchronous pipeline
 
 <img src="image.png" width="500" alt="alt text"/>
 
